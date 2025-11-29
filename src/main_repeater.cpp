@@ -1,72 +1,101 @@
-/*
-    Visible Light Communication (VLC) Transmitter
-    ------------------------------------------------
-    Sends characters using LED ON/OFF pulses as serial bits.
-    Format per transmitted character:
-        Start bit:  LOW
-        8 data bits: LSB first
-        Stop bit:   HIGH
-
-    Data is sent using Manchester-like LED toggling,
-    but simplified as raw ON/OFF bit signals.
-
-    String transmitted in this example:
-        "Hello World!"
-
-    This code explains:
-        - How each ASCII character becomes binary
-        - How bits are transmitted using LED
-        - How the receiver decodes the arriving bits
-        - Why LSB-first matters
-        - Full bit breakdown for characters like 'H'
-
-    Author: Efraim Manurung
-    email: efraim.manurung@gmail.com
-
-    v1.0.0
-*/
-
 #include <Arduino.h>
 
-#define LED_PIN 2
-#define PERIOD                                                                 \
-  50 // duration of each bit in ms (transmitter + receiver must match timing)
+#define LDR_PIN A0
+#define LIGHT_THRESHOLD 800
 
-char *message_string = "Hello World"; // message to transmit
+/* how to make it dynamic */
+#define MAX_BYTES 11 // "Hello World"
+
+#define LED_PIN 2
+#define PERIOD 50
+
+char received_buffer[MAX_BYTES];
+int buffer_index = 0;
 int message_length;
 
 /* function prototype */
 void send_byte(char byte_to_send);
 
+bool previous_light_state = false;
+bool current_light_state = false;
+bool received_all_character = false;
+
+/* function prototypes */
+bool read_LDR_as_digital();
+char read_byte_from_light();
+void print_character(char c);
+
 void setup() {
+  pinMode(LDR_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
 
-  message_length = strlen(message_string);
+  message_length = strlen(received_buffer);
 
   Serial.begin(9600);
-  Serial.println("Transmitter node started.");
+  Serial.println("Repeater node started.");
 }
 
-/*
- ------------------------------------------------------------------------------
-                                MAIN LOOP
-------------------------------------------------------------------------------
-*/
 void loop() {
-  for (int i = 0; i < message_length; i++) {
-    char outgoing_char = message_string[i];
+  current_light_state = read_LDR_as_digital();
 
-    // Print the character being transmitted for debugging
-    Serial.print("Transmitting char: ");
-    Serial.print(outgoing_char);
-    Serial.print("   ASCII: ");
-    Serial.println((int)outgoing_char);
+  // Detect falling edge: HIGH → LOW = start bit detected
+  if (previous_light_state == true && current_light_state == false) {
+    // if (buffer_index < MAX_BYTES) {
+    char received_character = read_byte_from_light();
+    // received_buffer[buffer_index++] = received_character;
+    print_character(received_character);
+    //}
 
-    send_byte(outgoing_char);
+    // received_all_character = true;
   }
 
-  delay(1000);
+  previous_light_state = current_light_state;
+
+  //   if (received_all_character == true) {
+  //     for (int i = 0; i < message_length; i++) {
+  //       char outgoing_char = received_buffer[i];
+
+  //       // Print the character being transmitted for debugging
+  //       Serial.print("Transmitting char: ");
+  //       Serial.print(outgoing_char);
+  //       Serial.print("   ASCII: ");
+  //       Serial.println((int)outgoing_char);
+
+  //       send_byte(outgoing_char);
+  //     }
+
+  //     received_all_character = false;
+  //   }
+
+  // delay(1000);
 }
+
+bool read_LDR_as_digital() {
+  int light_value = analogRead(LDR_PIN);
+  // Serial.printf("light value: %d\n", light_value);
+  return (light_value > LIGHT_THRESHOLD);
+}
+
+char read_byte_from_light() {
+  char reconstructed_byte = 0;
+
+  // align sampling to middle of first data bit
+  delay(PERIOD * 1.5);
+
+  for (int bit_index = 0; bit_index < 8; bit_index++) {
+    bool bit_value = read_LDR_as_digital(); // returns 0 or 1
+
+    // shift bit into correct position
+    reconstructed_byte |= (bit_value << bit_index);
+
+    // wait for next bit slot
+    delay(PERIOD);
+  }
+
+  return reconstructed_byte;
+}
+
+void print_character(char c) { Serial.print(c); }
 
 /*
  ------------------------------------------------------------------------------

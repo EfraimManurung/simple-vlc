@@ -29,9 +29,9 @@
 
 #include <Arduino.h>
 
-#define LDR_PIN 34    // Light sensor pin
-#define THRESHOLD 100 // threshold that converts analog → digital
-#define PERIOD 15     // bit duration (must match transmitter)
+#define LDR_PIN A0          // Light sensor pin
+#define LIGHT_THRESHOLD 800 // LIGHT_THRESHOLD that converts analog → digital
+#define PERIOD 50           // bit duration (must match transmitter)
 
 bool previous_light_state = false;
 bool current_light_state = false;
@@ -41,7 +41,12 @@ bool read_LDR_as_digital();
 char read_byte_from_light();
 void print_character(char c);
 
-void setup() { Serial.begin(9600); }
+void setup() {
+  pinMode(LDR_PIN, INPUT);
+
+  Serial.begin(9600);
+  Serial.println("Receiver node started.");
+}
 
 /*
  ------------------------------------------------------------------------------
@@ -76,17 +81,18 @@ void loop() {
 ------------------------------------------------------------------------------
     The LDR produces an analog value 0–1023.
 
-    THRESHOLD decides what counts as:
+    LIGHT_THRESHOLD decides what counts as:
 
-        Light ON  = 1  (voltage > THRESHOLD)
-        Light OFF = 0  (voltage <= THRESHOLD)
+        Light ON  = 1  (voltage > LIGHT_THRESHOLD)
+        Light OFF = 0  (voltage <= LIGHT_THRESHOLD)
 
     Must match transmitter brightness conditions.
 ------------------------------------------------------------------------------
 */
 bool read_LDR_as_digital() {
   int light_value = analogRead(LDR_PIN);
-  return (light_value > THRESHOLD);
+  // Serial.printf("light value: %d\n", light_value);
+  return (light_value > LIGHT_THRESHOLD);
 }
 
 /*
