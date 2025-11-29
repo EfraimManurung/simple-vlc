@@ -98,6 +98,7 @@ void setup() {
   pinMode(LDR_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
   Serial.begin(9600);
+  Serial.println("Repeater node started.");
 }
 
 /* ------------------------------------------------------------- */

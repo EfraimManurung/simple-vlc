@@ -1,147 +1,156 @@
 /*
     Visible Light Communication (VLC) Receiver
     ------------------------------------------------
-    Reads bits using an LDR (Light Dependent Resistor)
-    and reconstructs bytes transmitted by the LED-based
-    transmitter.
+    Reads bits using an LDR and reconstructs bytes sent
+    by the LED-based transmitter.
+
+    CHANGE IN THIS VERSION (v2.0.0):
+      ✔ Collect characters until newline '\n'
+      ✔ Compare full received message to expected string
+      ✔ Compute BER per message
+      ✔ Do not rely on fixed expected-length
+      ✔ Much more robust against noise
 
     TRANSMISSION FORMAT (per character):
         Start bit : LOW (LED OFF)
         Data bits : 8 bits, LSB first
         Stop bit  : HIGH (LED ON)
 
-    RECEIVER OPERATION:
-        1. Detect falling edge (HIGH → LOW) = start bit
-        2. Wait 1.5 bit periods to center on data bit 0
-        3. Sample 8 bits spaced exactly PERIOD ms apart
-        4. Reconstruct the byte using bit shifting
-        5. Print the ASCII character
-
-    Example received bits for 'H'
-        Transmitted (LSB first): 0 0 0 1 0 0 1 0
-        Reconstructed (MSB view): 01001000 = 'H'
-
     Author: Efraim Manurung
     email: efraim.manurung@gmail.com
 
-    v1.0.0
+    v2.0.0 (BER extension)
 */
 
 #include <Arduino.h>
 
-#define LDR_PIN A0          // Light sensor pin
-#define LIGHT_THRESHOLD 800 // LIGHT_THRESHOLD that converts analog → digital
-#define PERIOD 50           // bit duration (must match transmitter)
+#define LDR_PIN A0
+#define LIGHT_THRESHOLD 800
+#define PERIOD 50 // must match transmitter timing
 
 bool previous_light_state = false;
 bool current_light_state = false;
 
-/* function prototypes */
+/* -------------------------------------------------------------
+   PROTOTYPES
+------------------------------------------------------------- */
 bool read_LDR_as_digital();
 char read_byte_from_light();
-void print_character(char c);
 
+/* -------------------------------------------------------------
+   BER VARIABLES
+------------------------------------------------------------- */
+const char *EXPECTED_MESSAGE = "Hello World\n";
+String rx_buffer = "";
+
+unsigned long total_bits_received = 0;
+unsigned long bit_errors = 0;
+unsigned long messages_received = 0;
+int count_how_many_payload_have_arrived = 0;
+
+/* -------------------------------------------------------------
+   SETUP
+------------------------------------------------------------- */
 void setup() {
   pinMode(LDR_PIN, INPUT);
-
   Serial.begin(9600);
-  Serial.println("Receiver node started.");
+  Serial.println("Receiver node with BER measurement started.");
 }
 
-/*
- ------------------------------------------------------------------------------
-                                MAIN LOOP
-------------------------------------------------------------------------------
-    The receiver watches the LDR continuously.
-
-    We detect the START BIT by watching for a falling edge:
-         HIGH → LOW
-
-    Explanation:
-        Transmitted START bit is ALWAYS LOW.
-        So if light was HIGH and suddenly becomes LOW,
-        that means a new character is beginning.
-------------------------------------------------------------------------------
-*/
+/* -------------------------------------------------------------
+   MAIN LOOP
+------------------------------------------------------------- */
 void loop() {
+
   current_light_state = read_LDR_as_digital();
 
-  // Detect falling edge: HIGH → LOW = start bit detected
+  // Detect falling edge: HIGH → LOW => start bit detected
   if (previous_light_state == true && current_light_state == false) {
-    char received_character = read_byte_from_light();
-    print_character(received_character);
+
+    char received_char = read_byte_from_light();
+
+    if (received_char != 0) {
+      rx_buffer += received_char;
+      Serial.print(received_char); // real-time output
+    }
+
+    // ---------------------------------------------------------
+    //     CHECK IF WE RECEIVED A FULL MESSAGE ("\n")
+    // ---------------------------------------------------------
+    if (received_char == '\n') {
+
+      messages_received++;
+
+      Serial.println("\n--- Full message received ---");
+      Serial.print("Message: ");
+      Serial.println(rx_buffer);
+
+      // -------------------------------------------------------
+      //                BIT ERROR CALCULATION
+      // -------------------------------------------------------
+      int expected_len = strlen(EXPECTED_MESSAGE);
+      int received_len = rx_buffer.length();
+      int min_len = min(expected_len, received_len);
+
+      for (int i = 0; i < min_len; i++) {
+
+        char expected_c = EXPECTED_MESSAGE[i];
+        char received_c = rx_buffer[i];
+
+        // Compare all 8 bits
+        for (int b = 0; b < 8; b++) {
+
+          bool exp_bit = (expected_c >> b) & 1;
+          bool rec_bit = (received_c >> b) & 1;
+
+          total_bits_received++;
+
+          if (exp_bit != rec_bit)
+            bit_errors++;
+        }
+      }
+
+      float BER = (float)bit_errors / total_bits_received;
+
+      Serial.printf("Bits compared: %lu\n", total_bits_received);
+      Serial.printf("Bit errors  : %lu\n", bit_errors);
+      Serial.printf("Current BER = %.6f\n", BER);
+      Serial.println("-----------------------------------------");
+
+      // reset buffer for next message
+      rx_buffer = "";
+    }
   }
 
   previous_light_state = current_light_state;
 }
 
-/*
- ------------------------------------------------------------------------------
-                 CONVERT RAW ANALOG LDR DATA → DIGITAL 0/1
-------------------------------------------------------------------------------
-    The LDR produces an analog value 0–1023.
-
-    LIGHT_THRESHOLD decides what counts as:
-
-        Light ON  = 1  (voltage > LIGHT_THRESHOLD)
-        Light OFF = 0  (voltage <= LIGHT_THRESHOLD)
-
-    Must match transmitter brightness conditions.
-------------------------------------------------------------------------------
-*/
+/* -------------------------------------------------------------
+   Convert LDR analog → digital 0/1
+------------------------------------------------------------- */
 bool read_LDR_as_digital() {
-  int light_value = analogRead(LDR_PIN);
-  // Serial.printf("light value: %d\n", light_value);
-  return (light_value > LIGHT_THRESHOLD);
+  int val = analogRead(LDR_PIN);
+  return (val > LIGHT_THRESHOLD);
 }
 
-/*
- ------------------------------------------------------------------------------
-             READ AND RECONSTRUCT ONE FULL BYTE FROM LIGHT
-------------------------------------------------------------------------------
-    Timing is critical here.
-
-    PROCESS:
-
-    1. A falling edge tells us START BIT is happening.
-    2. We wait 1.5 * bit_period to align with BIT 0 center.
-       Why 1.5?
-           - 1 period: finish the start bit
-           - +0.5 period: move to center of data bit 0
-
-    3. Sample 8 bits, one per PERIOD ms.
-    4. Rebuild byte LSB-first:
-            bit0 → shift 0
-            bit1 → shift 1
-            ...
-            bit7 → shift 7
-
-    FORMULA:
-        result_byte = result_byte OR (bit_value << bit_index)
-------------------------------------------------------------------------------
-*/
+/* -------------------------------------------------------------
+   Read one full 8-bit char (start bit already detected)
+------------------------------------------------------------- */
 char read_byte_from_light() {
-  char reconstructed_byte = 0;
 
-  // align sampling to middle of first data bit
+  char reconstructed = 0;
+
+  // align to the middle of data bit 0
   delay(PERIOD * 1.5);
 
   for (int bit_index = 0; bit_index < 8; bit_index++) {
-    bool bit_value = read_LDR_as_digital(); // returns 0 or 1
 
-    // shift bit into correct position
-    reconstructed_byte |= (bit_value << bit_index);
+    bool bit_value = read_LDR_as_digital();
 
-    // wait for next bit slot
+    reconstructed |= (bit_value << bit_index);
+
     delay(PERIOD);
   }
 
-  return reconstructed_byte;
+  return reconstructed;
 }
-
-/*
- ------------------------------------------------------------------------------
-                       PRINT THE RECEIVED ASCII CHARACTER
-------------------------------------------------------------------------------
-*/
-void print_character(char c) { Serial.print(c); }
