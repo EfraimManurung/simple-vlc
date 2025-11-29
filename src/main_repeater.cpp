@@ -6,7 +6,6 @@
 #define LED_PIN 2
 #define LIGHT_THRESHOLD 800
 #define PERIOD 50
-#define CHAR_TIMEOUT 300
 
 String received_buffer = "";
 
@@ -21,17 +20,11 @@ bool read_LDR_as_digital() { return analogRead(LDR_PIN) > LIGHT_THRESHOLD; }
 /* ------------------------------------------------------------- */
 
 char read_byte_from_light() {
-  // verify real start bit by resampling
-  delay(PERIOD / 2);
-
-  if (read_LDR_as_digital() == true) {
-    return 0; // false trigger, abort
-  }
 
   char reconstructed = 0;
 
-  // align to middle of bit 0
-  delay(PERIOD);
+  // align sampling to middle of first data bit
+  delay(PERIOD * 1.5);
 
   for (int bit_index = 0; bit_index < 8; bit_index++) {
     bool bit_value = read_LDR_as_digital();
@@ -44,17 +37,55 @@ char read_byte_from_light() {
 
 /* ------------------------------------------------------------- */
 
-void send_byte(char b) {
+void send_byte(char byte_to_send) {
   is_sending = true;
-
+  /*
+      --------------------------------------------------
+      START BIT (always LOW)
+      --------------------------------------------------
+      The receiver detects LOW after a HIGH and knows:
+      "A new character is starting now".
+  */
   digitalWrite(LED_PIN, LOW);
   delay(PERIOD);
 
-  for (int i = 0; i < 8; i++) {
-    digitalWrite(LED_PIN, (b >> i) & 1);
+  /*
+      --------------------------------------------------
+      SEND ALL 8 DATA BITS (LSB FIRST)
+      --------------------------------------------------
+
+      We extract one bit at a time using:
+
+          mask = (1 << bit_index);
+          bit_value = (byte_to_send & mask) != 0;
+
+      Meaning:
+          If byte_to_send = 01001000 ('H')
+          mask for bit_index 3 = 00001000
+
+          (01001000 & 00001000) = 00001000 → bit = 1
+
+      This is exactly how serial UART works internally.
+  */
+  for (int bit_index = 0; bit_index < 8; bit_index++) {
+    int mask = (1 << bit_index);                 // isolate one bit position
+    bool bit_value = (byte_to_send & mask) != 0; // extract bit (true = 1)
+
+    /*
+        When bit_value is:
+            0 → LED OFF
+            1 → LED ON
+    */
+    digitalWrite(LED_PIN, bit_value);
     delay(PERIOD);
   }
 
+  /*
+      --------------------------------------------------
+      STOP BIT (always HIGH)
+      --------------------------------------------------
+      This tells the receiver the character is complete.
+  */
   digitalWrite(LED_PIN, HIGH);
   delay(PERIOD);
 
@@ -92,10 +123,8 @@ void loop() {
     previous_light_state = current_light_state;
   }
 
-  // complete message when quiet for a while
-  if (received_buffer.length() > 0 && millis() - last_bit_time > CHAR_TIMEOUT) {
-
-    Serial.println("--- Message complete ---");
+  // complete message when newline received
+  if (received_buffer.endsWith("\n")) {
 
     for (int i = 0; i < received_buffer.length(); i++) {
       char c = received_buffer[i];
@@ -104,7 +133,6 @@ void loop() {
       send_byte(c);
     }
 
-    received_buffer = ""; // clear for next message
-    delay(200);           // allow LDR to settle
+    received_buffer = "";
   }
 }

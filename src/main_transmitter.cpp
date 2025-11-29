@@ -32,7 +32,9 @@
 #define PERIOD                                                                 \
   50 // duration of each bit in ms (transmitter + receiver must match timing)
 
-char *message_string = "Hello World"; // message to transmit
+char *message_string =
+    "Hello World\n"; // message to transmit, we have to add newline!
+// Now message_length = 12, and the last byte = ASCII 10.
 int message_length;
 
 /* function prototype */
@@ -65,7 +67,8 @@ void loop() {
     send_byte(outgoing_char);
   }
 
-  delay(1000);
+  /* waiting repeater to send the message */
+  delay(10000);
 }
 
 /*
