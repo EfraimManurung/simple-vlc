@@ -22,8 +22,6 @@
 
     Author: Efraim Manurung
     email: efraim.manurung@gmail.com
-
-    v1.0.0
 */
 
 #include <Arduino.h>

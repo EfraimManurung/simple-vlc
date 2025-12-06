@@ -4,7 +4,7 @@
     Reads bits using an LDR and reconstructs bytes sent
     by the LED-based transmitter.
 
-    CHANGE IN THIS VERSION (v2.0.0):
+    CHANGE IN THIS VERSION:
       ✔ Collect characters until newline '\n'
       ✔ Compare full received message to expected string
       ✔ Compute BER per message
@@ -18,8 +18,6 @@
 
     Author: Efraim Manurung
     email: efraim.manurung@gmail.com
-
-    v2.0.0 (BER extension)
 */
 
 #include <Arduino.h>
