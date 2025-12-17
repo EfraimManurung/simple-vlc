@@ -1,0 +1,29 @@
+/* main_repeater.cpp */
+#include <Arduino.h>
+
+#define LDR_PIN A0
+#define LED_PIN 2
+#define LIGHT_THRESHOLD 800
+#define PERIOD 50
+
+/* function prototype */
+bool read_LDR_as_digital();
+
+void setup() {
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(LDR_PIN, INPUT);
+
+  Serial.begin(9600);
+  Serial.println("Repeater node started.");
+}
+
+void loop() {
+  // delay(PERIOD);
+  digitalWrite(LED_PIN, read_LDR_as_digital());
+}
+
+bool read_LDR_as_digital() {
+  int light_value = analogRead(LDR_PIN);
+  Serial.printf("light value: %d\n", light_value);
+  return (light_value > LIGHT_THRESHOLD);
+}

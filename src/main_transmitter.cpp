@@ -22,17 +22,19 @@
 
     Author: Efraim Manurung
     email: efraim.manurung@gmail.com
-
-    v1.0.0
 */
 
 #include <Arduino.h>
 
-#define LED_PIN 4
+#define LED_PIN 2
 #define PERIOD                                                                 \
-  15 // duration of each bit in ms (transmitter + receiver must match timing)
+  50 // duration of each bit in ms (transmitter + receiver must match timing)
 
-char *message_string = "Hello World!"; // message to transmit
+#define SEND_X_TIMES 10
+
+char *message_string =
+    "Hello World\n"; // message to transmit, we have to add newline!
+// Now message_length = 12 bytes of data, and the last byte = ASCII 10.
 int message_length;
 
 /* function prototype */
@@ -44,7 +46,31 @@ void setup() {
   message_length = strlen(message_string);
 
   Serial.begin(9600);
-  Serial.println("Transmitting: ");
+  Serial.println("Transmitter node started.");
+
+  /* make it stable */
+  delay(10000);
+
+  /* send data for X times */
+  for (int send_idx = 0; send_idx < SEND_X_TIMES; send_idx++) {
+    Serial.printf("SEND_X_TIME: %d\n", send_idx);
+    for (int char_idx = 0; char_idx < message_length; char_idx++) {
+      char outgoing_char = message_string[char_idx];
+
+      // Print the character being transmitted for debugging
+      Serial.print("Transmitting char: ");
+      Serial.print(outgoing_char);
+      Serial.print("   ASCII: ");
+      Serial.println((int)outgoing_char);
+
+      send_byte(outgoing_char);
+    }
+
+    /* waiting repeater to send the message */
+    delay(10000);
+  }
+
+  Serial.println("STOPPED!");
 }
 
 /*
@@ -52,21 +78,7 @@ void setup() {
                                 MAIN LOOP
 ------------------------------------------------------------------------------
 */
-void loop() {
-  for (int i = 0; i < message_length; i++) {
-    char outgoing_char = message_string[i];
-
-    // Print the character being transmitted for debugging
-    Serial.print("Transmitting char: ");
-    Serial.print(outgoing_char);
-    Serial.print("   ASCII: ");
-    Serial.println((int)outgoing_char);
-
-    send_byte(outgoing_char);
-  }
-
-  delay(1000);
-}
+void loop() { /* not used */ delay(1000); }
 
 /*
  ------------------------------------------------------------------------------
