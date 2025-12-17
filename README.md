@@ -103,15 +103,27 @@ The following figure summarizes the experimental observations and decoding perfo
 
 ## Demonstration Videos
 
-Example recordings of the system in operation are available in the `docs/videos` directory:
+The following videos demonstrate the VLC system operation and debugging process. Due to GitHub limitations, videos are stored in the repository and linked below.
 
-* **End‑to‑end VLC demonstration**
-  `docs/videos/example-simple-vlc.mp4`
+### 1. End‑to‑End VLC Demonstration
 
-* **Receiver serial monitor output**
-  `docs/videos/serial-monitor.mp4`
+Shows the complete visible light communication process from transmitter to receiver, including LED modulation and successful data reception.
 
-These videos demonstrate real‑time data transmission, reception, and debugging output.
+📹 **example-simple-vlc.mp4**
+Path: `docs/videos/example-simple-vlc.mp4`
+
+> This video demonstrates real‑time optical data transmission using LED intensity modulation.
+
+---
+
+### 2. Receiver Serial Monitor Output
+
+Shows the serial monitor output at the receiver side, including decoded data, error detection, and debugging information.
+
+📹 **serial-monitor.mp4**
+Path: `docs/videos/serial-monitor.mp4`
+
+> Useful for understanding timing behavior, decoding accuracy, and error handling.
 
 ---
 
