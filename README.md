@@ -1,15 +1,15 @@
 # simple-vlc
 
-A simple **Visible Light Communication (VLC / Li‑Fi)** proof‑of‑concept project built using microcontrollers and LEDs. This project demonstrates basic binary data transmission using light intensity modulation, including a transmitter, repeater, and receiver, along with error detection and bit‑error‑rate (BER) evaluation.
+A simple **Visible Light Communication (VLC / Li‑Fi)** proof‑of‑concept project built using microcontrollers and lasers. This project demonstrates basic binary data transmission using light intensity modulation, including a transmitter, repeater, and receiver, along with error detection and bit‑error‑rate (BER) evaluation.
 
 ---
 
 ## Overview
 
-Visible Light Communication (VLC) uses modulated light sources (e.g., LEDs) to transmit data through free space. In this project:
+Visible Light Communication (VLC) uses modulated light sources (e.g., lasers) to transmit data through free space. In this project:
 
 * Digital data is encoded into binary symbols
-* An LED acts as the optical transmitter
+* An laser acts as the optical transmitter
 * A photodiode / light sensor captures the signal at the receiver
 * A repeater node can regenerate and forward the signal
 
@@ -22,7 +22,7 @@ The goal of this repository is educational: to provide a **clear, minimal, and r
 The system consists of three main nodes:
 
 1. **Transmitter**
-   Encodes digital data into a binary optical signal by modulating LED intensity.
+   Encodes digital data into a binary optical signal by modulating laser intensity.
 
 2. **Repeater (optional)**
    Receives the optical signal, decodes it, and retransmits it to extend communication distance or improve reliability.
@@ -38,7 +38,7 @@ The following diagram shows the high‑level VLC architecture used in this proje
 
 ### Binary Transmission Concept
 
-A simplified binary modulation scheme is illustrated below, where logical `1` and `0` are represented by different LED light states:
+A simplified binary modulation scheme is illustrated below, where logical `1` and `0` are represented by different laser light states:
 
 ![Binary Scheme](docs/pictures/li-fi-binary-scheme-a-little-baby-step.png)
 
@@ -107,12 +107,12 @@ The following videos demonstrate the VLC system operation and debugging process.
 
 ### 1. End‑to‑End VLC Demonstration
 
-Shows the complete visible light communication process from transmitter to receiver, including LED modulation and successful data reception.
+Shows the complete visible light communication process from transmitter to receiver, including laser modulation and successful data reception.
 
 📹 **example-simple-vlc.mp4**
 Path: `docs/videos/example-simple-vlc.mp4`
 
-> This video demonstrates real‑time optical data transmission using LED intensity modulation.
+> This video demonstrates real‑time optical data transmission using laser intensity modulation.
 
 ---
 
@@ -129,7 +129,7 @@ Path: `docs/videos/serial-monitor.mp4`
 
 ## Features
 
-* Binary VLC transmission using LEDs
+* Binary VLC transmission using lasers
 * Error detection mechanism
 * Bit Error Rate (BER) calculation
 * Optional repeater for signal regeneration
